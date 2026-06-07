@@ -4,7 +4,7 @@ self.addEventListener("install", function(e) {
             return cache.addAll([
                 "./index.html",
                 "./style.css",
-                "./app.js"
+                "./myNotesApp.js" // SYNCED: Updated file name inside caching array
             ]);
         })
     );
