@@ -4,7 +4,7 @@ self.addEventListener("install", function(e) {
             return cache.addAll([
                 "./index.html",
                 "./style.css",
-                "./myNotesApp.js"
+                "./myNoteApp.js"
             ]);
         })
     );
