@@ -210,7 +210,7 @@ function applyPalettePreferences() {
     } else if (activePalette === "ocean") {
         root.style.setProperty('--bg-color', '#9ef3ef');
         root.style.setProperty('--surface-color', '#004d40');
-        root.style.setProperty('--text-color', '#e74242');
+        root.style.setProperty('--text-color', '#f5c0c0');
         root.style.setProperty('--primary-color', '#00bfa5');
         root.style.setProperty('--primary-hover', '#00a18b');
         root.style.setProperty('--border-color', 'rgba(255, 255, 255, 0.15)');
