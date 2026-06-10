@@ -1,4 +1,15 @@
 // ==========================================================================
+// SUPABASE CLOUD CONNECTION INITIALIZATION
+// ==========================================================================
+// TODO: Replace these placeholder strings with your actual Supabase Project Settings credentials
+const SUPABASE_URL = "https://vgelhstxwaroystxtvpi.supabase.co/rest/v1/";
+
+const SUPABASE_ANON_KEY = "sb_publishable_qebp47e0OiGEozzCcXmwpA_6AkJ1aX7";
+
+// This establishes the live connection toolbelt client
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ==========================================================================
 // ZONE 0: DICTIONARY TRANSLATIONS SYSTEM (BILINGUAL i18n DATA CONFIG)
 // ==========================================================================
 const translations = {
@@ -45,7 +56,7 @@ const translations = {
 // ==========================================================================
 // ZONE 1: APPLICATION CORE APP STATES VARIABLES
 // ==========================================================================
-let dashboardState = JSON.parse(localStorage.getItem("my_dashboard_data")) || [];
+let dashboardState = []; // Instantiated as empty; hydated directly from cloud
 let expandedCardsState = JSON.parse(localStorage.getItem("my_expanded_cards")) || {};
 let currentLang = localStorage.getItem("my_app_lang") || "en";
 let activePalette = localStorage.getItem("my_app_palette") || "default";
@@ -57,18 +68,15 @@ let activeFont = localStorage.getItem("my_app_font") || "Segoe UI, sans-serif";
 const notesDisplay = document.getElementById("notes-display");
 const checklistsDisplay = document.getElementById("checklists-display");
 
-// Creation overlay selectors
 const creationOverlay = document.getElementById("creation-overlay");
 const floatingAddBtn = document.getElementById("floating-add-btn");
 const closeOverlayBtn = document.getElementById("close-overlay-btn");
 
-// Inputs selectors
 const noteTitleInput = document.getElementById("note-title-input");
 const createNoteBtn = document.getElementById("create-note-btn");
 const checklistTitleInput = document.getElementById("checklist-title-input");
 const createListBtn = document.getElementById("create-list-btn");
 
-// Configuration menu panels selectors
 const settingsToggleBtn = document.getElementById("settings-toggle-btn");
 const settingsPanel = document.getElementById("settings-panel");
 const fontSelect = document.getElementById("font-select");
@@ -79,7 +87,6 @@ const langSelect = document.getElementById("lang-select");
 // ZONE 3: DYNAMIC APPLICATION EVENT EVENTLISTENERS LOGIC
 // ==========================================================================
 
-// Overlay workflow structural handlers
 floatingAddBtn.addEventListener("click", () => {
     creationOverlay.classList.remove("hidden");
     setTimeout(() => checklistTitleInput.focus(), 300); 
@@ -93,8 +100,9 @@ settingsToggleBtn.addEventListener("click", () => {
     settingsPanel.classList.toggle("hidden");
 });
 
-// --- REUSABLE CORE CARD CREATION CORE PROCESSING ENGINE FUNCTIONS ---
-function executeChecklistCreation() {
+// --- ASYNCHRONOUS FULL-STACK CARD TRANSACTION OPERATIONS ---
+
+async function executeChecklistCreation() {
     const titleText = checklistTitleInput.value.trim();
     if (titleText === "") return;
 
@@ -102,18 +110,28 @@ function executeChecklistCreation() {
         id: "card_" + Date.now(),
         type: "checklist",
         name: titleText,
-        items: []
+        items: [] // Sent into the PostgreSQL jsonb column natively
     };
 
-    dashboardState.push(newListObj);
-    expandedCardsState[newListObj.id] = true;
-    checklistTitleInput.value = "";
+    try {
+        // PUSH UPWARD TO CLOUD: Insert row into our Supabase notes table
+        const { error } = await supabase
+            .from('notes')
+            .insert([newListObj]);
 
-    creationOverlay.classList.add("hidden");
-    renderDashboard();
+        if (error) throw error;
+
+        dashboardState.push(newListObj);
+        expandedCardsState[newListObj.id] = true;
+        checklistTitleInput.value = "";
+        creationOverlay.classList.add("hidden");
+        renderDashboard();
+    } catch (err) {
+        alert("Cloud write error: " + err.message);
+    }
 }
 
-function executeNoteCreation() {
+async function executeNoteCreation() {
     const titleText = noteTitleInput.value.trim();
     if (titleText === "") return;
 
@@ -121,18 +139,28 @@ function executeNoteCreation() {
         id: "card_" + Date.now(),
         type: "note",
         name: titleText,
-        bodyContent: ""
+        body_content: "" // column matches postgres schema underscore naming conventions
     };
 
-    dashboardState.push(newNoteObj);
-    expandedCardsState[newNoteObj.id] = true;
-    noteTitleInput.value = "";
-    
-    creationOverlay.classList.add("hidden");
-    renderDashboard();
+    try {
+        // PUSH UPWARD TO CLOUD: Insert row into our Supabase notes table
+        const { error } = await supabase
+            .from('notes')
+            .insert([newNoteObj]);
+
+        if (error) throw error;
+
+        dashboardState.push(newNoteObj);
+        expandedCardsState[newNoteObj.id] = true;
+        noteTitleInput.value = "";
+        creationOverlay.classList.add("hidden");
+        renderDashboard();
+    } catch (err) {
+        alert("Cloud write error: " + err.message);
+    }
 }
 
-// --- ATTACHING THE TRIGGERS (BUTTON CLICK + KEYDOWN ENTER KEY ENGINE) ---
+// Attach listeners to input triggers
 createListBtn.addEventListener("click", executeChecklistCreation);
 checklistTitleInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") executeChecklistCreation();
@@ -143,7 +171,6 @@ noteTitleInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") executeNoteCreation();
 });
 
-// App configuration preferences handlers
 langSelect.addEventListener("change", (e) => {
     currentLang = e.target.value;
     localStorage.setItem("my_app_lang", currentLang);
@@ -166,20 +193,36 @@ paletteSelect.addEventListener("change", (e) => {
 // ==========================================================================
 // ZONE 4: MASTER RUNTIME DATA RENDER CONFIGURATION FUNCTIONS
 // ==========================================================================
+
+// NEW: ASYNCHRONOUS INITIAL HYDRATION STREAM FROM POSTGRES SERVER
+async function fetchNotesFromCloud() {
+    try {
+        const { data, error } = await supabase
+            .from('notes')
+            .select('*');
+
+        if (error) throw error;
+
+        if (data) {
+            dashboardState = data;
+            renderDashboard();
+        }
+    } catch (err) {
+        console.error("Critical Cloud Fetch Failure: ", err.message);
+    }
+}
+
 function translateUI() {
     const langData = translations[currentLang];
-    
     document.getElementById("notes-column-title").textContent = langData.notesColumn;
     document.getElementById("lists-column-title").textContent = langData.listsColumn;
     document.getElementById("creation-overlay-title").textContent = langData.overlayTitle;
     document.getElementById("new-note-title").textContent = langData.newNote;
     document.getElementById("new-checklist-title").textContent = langData.newChecklist;
-    
     createNoteBtn.textContent = langData.createNoteBtn;
     createListBtn.textContent = langData.createListBtn;
     noteTitleInput.placeholder = langData.placeholderNote;
     checklistTitleInput.placeholder = langData.placeholderList;
-    
     langSelect.value = currentLang;
 }
 
@@ -201,37 +244,31 @@ function applyPalettePreferences() {
         root.style.setProperty('--border-color', 'rgba(0,0,0,0.08)');
         root.style.setProperty('--shadow-light', 'rgba(255, 255, 255, 0.9)');
         root.style.setProperty('--shadow-dark', 'rgba(163, 177, 198, 0.4)');
-        // Form Controls & Overlay Contrast Targets
         root.style.setProperty('--input-bg-color', '#ffffff');
         root.style.setProperty('--input-text-color', '#2c3e50');
-        root.style.setProperty('--overlay-bg', 'rgba(0, 0, 0, 0.4)');
-        root.style.setProperty('--card-bg', '#ffffff');
-        root.style.setProperty('--card-text', '#2c3e50');
     } else if (activePalette === "ocean") {
-        root.style.setProperty('--bg-color', '#9ef3ef');
+        root.style.setProperty('--bg-color', '#e0f2f1');
         root.style.setProperty('--surface-color', '#004d40');
-        root.style.setProperty('--text-color', '#f5c0c0');
+        root.style.setProperty('--text-color', '#ffffff');
         root.style.setProperty('--primary-color', '#00bfa5');
         root.style.setProperty('--primary-hover', '#00a18b');
         root.style.setProperty('--border-color', 'rgba(255, 255, 255, 0.15)');
         root.style.setProperty('--shadow-light', 'rgba(255, 255, 255, 0.05)');
         root.style.setProperty('--shadow-dark', 'rgba(0, 0, 0, 0.3)');
-        // Form Controls & Overlay Contrast Targets (FIXED: High-contrast values mapped out)
         root.style.setProperty('--input-bg-color', '#ffffff');
         root.style.setProperty('--input-text-color', '#004d40');
         root.style.setProperty('--overlay-bg', 'rgba(0, 51, 44, 0.7)');
         root.style.setProperty('--card-bg', '#004d40');
         root.style.setProperty('--card-text', '#ffffff');
     } else if (activePalette === "sunset") {
-        root.style.setProperty('--bg-color', '#f1d6ae');
+        root.style.setProperty('--bg-color', '#fdf6ec');
         root.style.setProperty('--surface-color', '#3e2723');
-        root.style.setProperty('--text-color', '#d37e08');
+        root.style.setProperty('--text-color', '#fdf6ec');
         root.style.setProperty('--primary-color', '#e67e22');
         root.style.setProperty('--primary-hover', '#d35400');
         root.style.setProperty('--border-color', 'rgba(255, 255, 255, 0.12)');
         root.style.setProperty('--shadow-light', 'rgba(255, 255, 255, 0.05)');
         root.style.setProperty('--shadow-dark', 'rgba(0, 0, 0, 0.4)');
-        // Form Controls & Overlay Contrast Targets (FIXED: High-contrast values mapped out)
         root.style.setProperty('--input-bg-color', '#ffffff');
         root.style.setProperty('--input-text-color', '#3e2723');
         root.style.setProperty('--overlay-bg', 'rgba(38, 23, 21, 0.75)');
@@ -246,7 +283,6 @@ function applyPalettePreferences() {
         root.style.setProperty('--border-color', 'rgba(0, 255, 255, 0.2)');
         root.style.setProperty('--shadow-light', 'rgba(23, 0, 85, 0.5)');
         root.style.setProperty('--shadow-dark', 'rgba(0, 0, 0, 0.7)');
-        // Form Controls & Overlay Contrast Targets
         root.style.setProperty('--input-bg-color', '#0c002b');
         root.style.setProperty('--input-text-color', '#00ffff');
         root.style.setProperty('--overlay-bg', 'rgba(12, 0, 43, 0.7)');
@@ -272,9 +308,6 @@ function renderDashboard() {
         emptyNotice.textContent = langData.emptyNotes;
         emptyNotice.style.color = "var(--text-color)";
         emptyNotice.style.opacity = "0.6";
-        emptyNotice.style.fontStyle = "italic";
-        emptyNotice.style.fontSize = "14px";
-        emptyNotice.style.padding = "10px";
         notesDisplay.appendChild(emptyNotice);
     }
 
@@ -283,9 +316,6 @@ function renderDashboard() {
         emptyNotice.textContent = langData.emptyLists;
         emptyNotice.style.color = "var(--text-color)";
         emptyNotice.style.opacity = "0.6";
-        emptyNotice.style.fontStyle = "italic";
-        emptyNotice.style.fontSize = "14px";
-        emptyNotice.style.padding = "10px";
         checklistsDisplay.appendChild(emptyNotice);
     }
 
@@ -326,7 +356,7 @@ function renderDashboard() {
 
         if (card.type === "note") {
             const newText = document.createElement("textarea");
-            newText.value = card.bodyContent || "";
+            newText.value = card.body_content || "";
             cardBody.appendChild(newText);
 
             const actionsRow = document.createElement("div");
@@ -335,20 +365,46 @@ function renderDashboard() {
             const saveBtn = document.createElement("button");
             saveBtn.textContent = langData.saveCard;
             saveBtn.classList.add("save-card-btn");
-            saveBtn.addEventListener("click", () => {
-                card.bodyContent = newText.value;
-                localStorage.setItem("my_dashboard_data", JSON.stringify(dashboardState));
+            
+            // FULL-STACK MUTATION: Update existing note data rows inside the cloud
+            saveBtn.addEventListener("click", async () => {
+                card.body_content = newText.value;
                 saveBtn.style.backgroundColor = "var(--primary-hover)";
-                setTimeout(() => { saveBtn.style.backgroundColor = "var(--primary-color)"; }, 500);
+                
+                try {
+                    const { error } = await supabase
+                        .from('notes')
+                        .update({ body_content: card.body_content })
+                        .eq('id', card.id);
+
+                    if (error) throw error;
+                    setTimeout(() => { saveBtn.style.backgroundColor = "var(--primary-color)"; }, 500);
+                } catch (err) {
+                    alert("Cloud update failed: " + err.message);
+                }
             });
 
             const deleteCardBtn = document.createElement("button");
             deleteCardBtn.textContent = langData.deleteCard;
             deleteCardBtn.classList.add("delete-card-btn");
-            deleteCardBtn.addEventListener("click", () => {
-                dashboardState = dashboardState.filter(item => item.id !== card.id);
-                delete expandedCardsState[card.id];
-                renderDashboard();
+            
+            // FULL-STACK MUTATION: Delete note data rows from the cloud entirely
+            deleteCardBtn.addEventListener("click", async () => {
+                if(!confirm("Are you sure?")) return;
+                try {
+                    const { error } = await supabase
+                        .from('notes')
+                        .delete()
+                        .eq('id', card.id);
+
+                    if (error) throw error;
+
+                    dashboardState = dashboardState.filter(item => item.id !== card.id);
+                    delete expandedCardsState[card.id];
+                    renderDashboard();
+                } catch (err) {
+                    alert("Cloud target deletion failed: " + err.message);
+                }
             });
 
             actionsRow.appendChild(saveBtn);
@@ -372,9 +428,19 @@ function renderDashboard() {
                     span.style.color = "gray";
                 }
 
-                cb.addEventListener("change", () => {
+                // FULL-STACK MUTATION: Sync individual checkbox checking triggers to cloud JSON column arrays
+                cb.addEventListener("change", async () => {
                     task.completed = cb.checked;
-                    renderDashboard();
+                    try {
+                        const { error } = await supabase
+                            .from('notes')
+                            .update({ items: card.items })
+                            .eq('id', card.id);
+                        if (error) throw error;
+                        renderDashboard();
+                    } catch (err) {
+                        alert("Task sync failed: " + err.message);
+                    }
                 });
 
                 li.appendChild(cb);
@@ -389,11 +455,21 @@ function renderDashboard() {
             miniInput.type = "text";
             miniInput.placeholder = langData.innerTodoPlaceholder;
 
-            function submitTaskItem() {
+            // FULL-STACK MUTATION: Push secondary items directly into deep nesting cloud targets
+            async function submitTaskItem() {
                 let taskText = miniInput.value.trim();
-                if (taskText !== "") {
-                    card.items.push({ text: taskText, completed: false });
+                if (taskText === "") return;
+                
+                card.items.push({ text: taskText, completed: false });
+                try {
+                    const { error } = await supabase
+                        .from('notes')
+                        .update({ items: card.items })
+                        .eq('id', card.id);
+                    if (error) throw error;
                     renderDashboard();
+                } catch (err) {
+                    alert("Adding task failed: " + err.message);
                 }
             }
 
@@ -414,10 +490,22 @@ function renderDashboard() {
             const deleteCardBtn = document.createElement("button");
             deleteCardBtn.textContent = langData.deleteCard;
             deleteCardBtn.classList.add("delete-card-btn");
-            deleteCardBtn.addEventListener("click", () => {
-                dashboardState = dashboardState.filter(item => item.id !== card.id);
-                delete expandedCardsState[card.id];
-                renderDashboard();
+            
+            deleteCardBtn.addEventListener("click", async () => {
+                if(!confirm("Are you sure?")) return;
+                try {
+                    const { error } = await supabase
+                        .from('notes')
+                        .delete()
+                        .eq('id', card.id);
+                    if (error) throw error;
+
+                    dashboardState = dashboardState.filter(item => item.id !== card.id);
+                    delete expandedCardsState[card.id];
+                    renderDashboard();
+                } catch (err) {
+                    alert("Cloud target deletion failed: " + err.message);
+                }
             });
             cardBody.appendChild(deleteCardBtn);
         }
@@ -431,7 +519,6 @@ function renderDashboard() {
         }
     }
 
-    localStorage.setItem("my_dashboard_data", JSON.stringify(dashboardState));
     localStorage.setItem("my_expanded_cards", JSON.stringify(expandedCardsState));
 }
 
@@ -441,4 +528,5 @@ function renderDashboard() {
 translateUI();
 applyFontPreferences();
 applyPalettePreferences();
-renderDashboard();
+// Boot up by pulling fresh cloud rows over the network pipeline
+fetchNotesFromCloud();
