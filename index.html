@@ -16,7 +16,7 @@
             <h1 class="app-title">
                 <i class="fa-solid fa-note-sticky"></i> My Notes App
             </h1>
-            <button class="btn-settings" aria-label="Settings">
+            <button class="btn-settings" id="settings-toggle-btn" aria-label="Settings">
                 <i class="fa-solid fa-gear"></i>
             </button>
         </div>
@@ -51,26 +51,33 @@
         </div>
     </div>
 
-    <div class="creators-wrapper">
-        <div class="app-container">
-            <h2>New Checklist</h2>
-            <div class="input-section">
-                <input type="text" id="checklist-title-input" placeholder="Checklist Title...">
-                <button id="create-list-btn">Create List</button>
-            </div> 
-        </div>
+    <div id="creation-overlay" class="creation-overlay hidden">
+        <div class="overlay-glass-card">
+            <div class="overlay-header">
+                <h2 id="creation-overlay-title">Create New Item</h2>
+                <button id="close-overlay-btn" class="close-overlay-btn">&times;</button>
+            </div>
+            
+            <div class="creators-wrapper">
+                <div class="creator-card">
+                    <h2 id="new-checklist-title">New Checklist</h2>
+                    <div class="input-section">
+                        <input type="text" id="checklist-title-input" placeholder="Checklist Title...">
+                        <button id="create-list-btn" class="action-glow-btn">Create List</button>
+                    </div> 
+                </div>
 
-        <div class="note-creator">
-            <h2>New Note</h2>
-            <div class="input-section">
-                <input type="text" id="note-title-input" placeholder="Note Title...">
-                <button id="create-note-btn">Create Note</button>
+                <div class="creator-card">
+                    <h2 id="new-note-title">New Note</h2>
+                    <div class="input-section">
+                        <input type="text" id="note-title-input" placeholder="Note Title...">
+                        <button id="create-note-btn" class="action-glow-btn">Create Note</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <hr>
-    
     <div class="workspace-layout">
         <div class="column-section">
             <h2 id="notes-column-title" class="column-header">Notes</h2>
@@ -81,6 +88,8 @@
             <div id="checklists-display" class="cards-list"></div>
         </div>
     </div>
+
+    <button id="floating-add-btn" class="floating-add-btn" aria-label="Add Item">+</button>
     
     <footer class="app-footer">
         <div class="footer-container">
@@ -96,8 +105,8 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./service-worker.js')
-                    .then(reg => console.log('PWA Service Worker Active!', reg.scope))
-                    .catch(err => console.log('Service Worker setup failed: ', err));
+                    .then(reg => console.log('PWA Active!', reg.scope))
+                    .catch(err => console.log('PWA Failed: ', err));
             });
         }
     </script>
