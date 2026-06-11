@@ -1,3 +1,5 @@
+const SUPABASE_URL = "https://vgelhstxwaroystxtvpi.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_qebp47e0OiGEozzCcXmwpA_6AkJ1aX7";
 // ==========================================================================
 // ZONE 0: DICTIONARY TRANSLATIONS SYSTEM (BILINGUAL i18n DATA CONFIG)
 // ==========================================================================
