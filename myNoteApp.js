@@ -2,7 +2,7 @@
 // SUPABASE CLOUD CONNECTION INITIALIZATION (Collision-Proof Version)
 // ==========================================================================
 const SUPABASE_URL = "https://vgelhstxwaroystxtvpi.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_qebp47e0OiGEozzCcXmwpA_6AkJ1aX7";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZnZWxoc3R4d2Fyb3lzdHh0dnBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwNjQyNDgsImV4cCI6MjA5NjY0MDI0OH0.dimqxPWIhejuLifm0ooqiEXqz0T7un_NB4s3WhdJlnw";
 
 // Initializing the live database toolbelt instance with a unique variable name
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
