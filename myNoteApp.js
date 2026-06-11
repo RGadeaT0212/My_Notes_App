@@ -510,10 +510,20 @@ function renderDashboard() {
 }
 
 // ==========================================================================
-// ZONE 5: KICKSTART APP RUNTIME INITS
+// ZONE 5: KICKSTART APP RUNTIME INITS WITH REALTIME CHANNEL LISTENER
 // ==========================================================================
 translateUI();
 applyFontPreferences();
 applyPalettePreferences();
-// Boot up by syncing immediately with the virtual distributed server rows!
+
+// Initial database load
 fetchNotesFromCloud();
+
+// NEW: Real-time network stream connection
+supabaseClient
+    .channel('schema-db-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, () => {
+        // The millisecond the database changes anywhere on earth, automatically sync the UI!
+        fetchNotesFromCloud();
+    })
+    .subscribe();
