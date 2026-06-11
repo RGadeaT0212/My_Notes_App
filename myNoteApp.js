@@ -1,5 +1,12 @@
+// ==========================================================================
+// SUPABASE CLOUD CONNECTION INITIALIZATION
+// ==========================================================================
 const SUPABASE_URL = "https://vgelhstxwaroystxtvpi.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_qebp47e0OiGEozzCcXmwpA_6AkJ1aX7";
+
+// FIXED: Initializing the live database toolbelt instance
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 // ==========================================================================
 // ZONE 0: DICTIONARY TRANSLATIONS SYSTEM (BILINGUAL i18n DATA CONFIG)
 // ==========================================================================
@@ -47,7 +54,7 @@ const translations = {
 // ==========================================================================
 // ZONE 1: APPLICATION CORE APP STATES VARIABLES
 // ==========================================================================
-let dashboardState = JSON.parse(localStorage.getItem("my_dashboard_data")) || [];
+let dashboardState = []; // Instantiated as empty; hydrated instantly from cloud records
 let expandedCardsState = JSON.parse(localStorage.getItem("my_expanded_cards")) || {};
 let currentLang = localStorage.getItem("my_app_lang") || "en";
 let activePalette = localStorage.getItem("my_app_palette") || "default";
@@ -59,18 +66,15 @@ let activeFont = localStorage.getItem("my_app_font") || "Segoe UI, sans-serif";
 const notesDisplay = document.getElementById("notes-display");
 const checklistsDisplay = document.getElementById("checklists-display");
 
-// Creation overlay selectors
 const creationOverlay = document.getElementById("creation-overlay");
 const floatingAddBtn = document.getElementById("floating-add-btn");
 const closeOverlayBtn = document.getElementById("close-overlay-btn");
 
-// Inputs selectors
 const noteTitleInput = document.getElementById("note-title-input");
 const createNoteBtn = document.getElementById("create-note-btn");
 const checklistTitleInput = document.getElementById("checklist-title-input");
 const createListBtn = document.getElementById("create-list-btn");
 
-// Configuration menu panels selectors
 const settingsToggleBtn = document.getElementById("settings-toggle-btn");
 const settingsPanel = document.getElementById("settings-panel");
 const fontSelect = document.getElementById("font-select");
@@ -81,10 +85,8 @@ const langSelect = document.getElementById("lang-select");
 // ZONE 3: DYNAMIC APPLICATION EVENT EVENTLISTENERS LOGIC
 // ==========================================================================
 
-// Overlay workflow structural handlers
 floatingAddBtn.addEventListener("click", () => {
     creationOverlay.classList.remove("hidden");
-    // Auto-focuses the first input box for a fluid native app feel
     setTimeout(() => checklistTitleInput.focus(), 300); 
 });
 
@@ -96,8 +98,9 @@ settingsToggleBtn.addEventListener("click", () => {
     settingsPanel.classList.toggle("hidden");
 });
 
-// --- REUSABLE CORE CARD CREATION CORE PROCESSING ENGINE FUNCTIONS ---
-function executeChecklistCreation() {
+// --- FIXED: ASYNCHRONOUS CLOUD CRUD DATABASE OPERATIONS ---
+
+async function executeChecklistCreation() {
     const titleText = checklistTitleInput.value.trim();
     if (titleText === "") return;
 
@@ -108,15 +111,24 @@ function executeChecklistCreation() {
         items: []
     };
 
-    dashboardState.push(newListObj);
-    expandedCardsState[newListObj.id] = true;
-    checklistTitleInput.value = "";
+    try {
+        const { error } = await supabase
+            .from('notes')
+            .insert([newListObj]);
 
-    creationOverlay.classList.add("hidden");
-    renderDashboard();
+        if (error) throw error;
+
+        dashboardState.push(newListObj);
+        expandedCardsState[newListObj.id] = true;
+        checklistTitleInput.value = "";
+        creationOverlay.classList.add("hidden");
+        renderDashboard();
+    } catch (err) {
+        alert("Cloud write failure: " + err.message);
+    }
 }
 
-function executeNoteCreation() {
+async function executeNoteCreation() {
     const titleText = noteTitleInput.value.trim();
     if (titleText === "") return;
 
@@ -124,18 +136,27 @@ function executeNoteCreation() {
         id: "card_" + Date.now(),
         type: "note",
         name: titleText,
-        bodyContent: ""
+        body_content: "" // Database naming conventions support underscores
     };
 
-    dashboardState.push(newNoteObj);
-    expandedCardsState[newNoteObj.id] = true;
-    noteTitleInput.value = "";
-    
-    creationOverlay.classList.add("hidden");
-    renderDashboard();
+    try {
+        const { error } = await supabase
+            .from('notes')
+            .insert([newNoteObj]);
+
+        if (error) throw error;
+
+        dashboardState.push(newNoteObj);
+        expandedCardsState[newNoteObj.id] = true;
+        noteTitleInput.value = "";
+        creationOverlay.classList.add("hidden");
+        renderDashboard();
+    } catch (err) {
+        alert("Cloud write failure: " + err.message);
+    }
 }
 
-// --- ATTACHING THE TRIGGERS (BUTTON CLICK + KEYDOWN ENTER KEY ENGINE) ---
+// Triggers
 createListBtn.addEventListener("click", executeChecklistCreation);
 checklistTitleInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") executeChecklistCreation();
@@ -146,7 +167,6 @@ noteTitleInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") executeNoteCreation();
 });
 
-// App configuration preferences handlers
 langSelect.addEventListener("change", (e) => {
     currentLang = e.target.value;
     localStorage.setItem("my_app_lang", currentLang);
@@ -169,11 +189,29 @@ paletteSelect.addEventListener("change", (e) => {
 // ==========================================================================
 // ZONE 4: MASTER RUNTIME DATA RENDER CONFIGURATION FUNCTIONS
 // ==========================================================================
+
+// FIXED: Dynamic Asynchronous Cloud Hydrator
+async function fetchNotesFromCloud() {
+    try {
+        const { data, error } = await supabase
+            .from('notes')
+            .select('*');
+
+        if (error) throw error;
+
+        if (data) {
+            dashboardState = data;
+            renderDashboard();
+        }
+    } catch (err) {
+        console.error("Critical Cloud Pipeline Fetch Failure: ", err.message);
+    }
+}
+
 function translateUI() {
     const langData = translations[currentLang];
-    if (!langData) return; // Safeguard if language data is missing
+    if (!langData) return; 
     
-    // Defensive Guarded Translations (Prevents any 'null' properties crashes!)
     const elNotesCol = document.getElementById("notes-column-title");
     if (elNotesCol) elNotesCol.textContent = langData.notesColumn;
 
@@ -189,7 +227,6 @@ function translateUI() {
     const elNewListTitle = document.getElementById("new-checklist-title");
     if (elNewListTitle) elNewListTitle.textContent = langData.newChecklist;
     
-    // Core Button & Input Safe Checks
     if (createNoteBtn) createNoteBtn.textContent = langData.createNoteBtn;
     if (createListBtn) createListBtn.textContent = langData.createListBtn;
     if (noteTitleInput) noteTitleInput.placeholder = langData.placeholderNote;
@@ -243,7 +280,6 @@ function renderDashboard() {
     checklistsDisplay.innerHTML = "";
     const langData = translations[currentLang];
 
-    // QUANTIFY CARDS PATTERNS
     let noteCount = 0;
     let checklistCount = 0;
     for (let card of dashboardState) {
@@ -251,7 +287,6 @@ function renderDashboard() {
         if (card.type === "checklist") checklistCount++;
     }
 
-    // INTERACTIVE EMPTY STATE SAFEGUARDS
     if (noteCount === 0) {
         const emptyNotice = document.createElement("p");
         emptyNotice.textContent = langData.emptyNotes;
@@ -274,7 +309,6 @@ function renderDashboard() {
         checklistsDisplay.appendChild(emptyNotice);
     }
 
-    // MAIN RENDER STREAMING LOOP
     for (let card of dashboardState) {
         const fieldText = document.createElement("fieldset");
         fieldText.classList.add("fade-in-item");
@@ -282,7 +316,6 @@ function renderDashboard() {
         const fieldName = document.createElement("legend");
         fieldName.classList.add("accordion-header");
         
-        // CHECKLIST DYNAMIC COMPLETION LOGIC
         let progressText = "";
         if (card.type === "checklist" && card.items && card.items.length > 0) {
             const totalTasks = card.items.length;
@@ -311,10 +344,9 @@ function renderDashboard() {
             cardBody.classList.add("collapsed");
         }
 
-        // CONDITIONAL GENERATOR STRUCT ROUTING
         if (card.type === "note") {
             const newText = document.createElement("textarea");
-            newText.value = card.bodyContent || "";
+            newText.value = card.body_content || "";
             cardBody.appendChild(newText);
 
             const actionsRow = document.createElement("div");
@@ -323,20 +355,43 @@ function renderDashboard() {
             const saveBtn = document.createElement("button");
             saveBtn.textContent = langData.saveCard;
             saveBtn.classList.add("save-card-btn");
-            saveBtn.addEventListener("click", () => {
-                card.bodyContent = newText.value;
-                localStorage.setItem("my_dashboard_data", JSON.stringify(dashboardState));
+            
+            // FIXED: Full-stack asynchronous note updating
+            saveBtn.addEventListener("click", async () => {
+                card.body_content = newText.value;
                 saveBtn.style.backgroundColor = "var(--primary-hover)";
-                setTimeout(() => { saveBtn.style.backgroundColor = "var(--primary-color)"; }, 500);
+                try {
+                    const { error } = await supabase
+                        .from('notes')
+                        .update({ body_content: card.body_content })
+                        .eq('id', card.id);
+                    if (error) throw error;
+                    setTimeout(() => { saveBtn.style.backgroundColor = "var(--primary-color)"; }, 500);
+                } catch (err) {
+                    alert("Cloud save failed: " + err.message);
+                }
             });
 
             const deleteCardBtn = document.createElement("button");
             deleteCardBtn.textContent = langData.deleteCard;
             deleteCardBtn.classList.add("delete-card-btn");
-            deleteCardBtn.addEventListener("click", () => {
-                dashboardState = dashboardState.filter(item => item.id !== card.id);
-                delete expandedCardsState[card.id];
-                renderDashboard();
+            
+            // FIXED: Full-stack asynchronous card dropping
+            deleteCardBtn.addEventListener("click", async () => {
+                if(!confirm("Delete this card from the cloud permanent register?")) return;
+                try {
+                    const { error } = await supabase
+                        .from('notes')
+                        .delete()
+                        .eq('id', card.id);
+                    if (error) throw error;
+
+                    dashboardState = dashboardState.filter(item => item.id !== card.id);
+                    delete expandedCardsState[card.id];
+                    renderDashboard();
+                } catch (err) {
+                    alert("Cloud delete failed: " + err.message);
+                }
             });
 
             actionsRow.appendChild(saveBtn);
@@ -360,9 +415,19 @@ function renderDashboard() {
                     span.style.color = "gray";
                 }
 
-                cb.addEventListener("change", () => {
+                // FIXED: Full-stack asynchronous checklist state change
+                cb.addEventListener("change", async () => {
                     task.completed = cb.checked;
-                    renderDashboard();
+                    try {
+                        const { error } = await supabase
+                            .from('notes')
+                            .update({ items: card.items })
+                            .eq('id', card.id);
+                        if (error) throw error;
+                        renderDashboard();
+                    } catch (err) {
+                        alert("Task sync failed: " + err.message);
+                    }
                 });
 
                 li.appendChild(cb);
@@ -377,11 +442,21 @@ function renderDashboard() {
             miniInput.type = "text";
             miniInput.placeholder = langData.innerTodoPlaceholder;
 
-            function submitTaskItem() {
+            // FIXED: Asynchronous micro sub-item insertion logic
+            async function submitTaskItem() {
                 let taskText = miniInput.value.trim();
-                if (taskText !== "") {
-                    card.items.push({ text: taskText, completed: false });
+                if (taskText === "") return;
+                
+                card.items.push({ text: taskText, completed: false });
+                try {
+                    const { error } = await supabase
+                        .from('notes')
+                        .update({ items: card.items })
+                        .eq('id', card.id);
+                    if (error) throw error;
                     renderDashboard();
+                } catch (err) {
+                    alert("Adding checklist item failed: " + err.message);
                 }
             }
 
@@ -402,10 +477,22 @@ function renderDashboard() {
             const deleteCardBtn = document.createElement("button");
             deleteCardBtn.textContent = langData.deleteCard;
             deleteCardBtn.classList.add("delete-card-btn");
-            deleteCardBtn.addEventListener("click", () => {
-                dashboardState = dashboardState.filter(item => item.id !== card.id);
-                delete expandedCardsState[card.id];
-                renderDashboard();
+            
+            deleteCardBtn.addEventListener("click", async () => {
+                if(!confirm("Delete this card from the cloud permanent register?")) return;
+                try {
+                    const { error } = await supabase
+                        .from('notes')
+                        .delete()
+                        .eq('id', card.id);
+                    if (error) throw error;
+
+                    dashboardState = dashboardState.filter(item => item.id !== card.id);
+                    delete expandedCardsState[card.id];
+                    renderDashboard();
+                } catch (err) {
+                    alert("Cloud delete failed: " + err.message);
+                }
             });
             cardBody.appendChild(deleteCardBtn);
         }
@@ -419,7 +506,6 @@ function renderDashboard() {
         }
     }
 
-    localStorage.setItem("my_dashboard_data", JSON.stringify(dashboardState));
     localStorage.setItem("my_expanded_cards", JSON.stringify(expandedCardsState));
 }
 
@@ -429,4 +515,5 @@ function renderDashboard() {
 translateUI();
 applyFontPreferences();
 applyPalettePreferences();
-renderDashboard();
+// Boot up by syncing immediately with the virtual distributed server rows!
+fetchNotesFromCloud();
