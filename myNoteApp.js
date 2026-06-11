@@ -171,19 +171,31 @@ paletteSelect.addEventListener("change", (e) => {
 // ==========================================================================
 function translateUI() {
     const langData = translations[currentLang];
+    if (!langData) return; // Safeguard if language data is missing
     
-    document.getElementById("notes-column-title").textContent = langData.notesColumn;
-    document.getElementById("lists-column-title").textContent = langData.listsColumn;
-    document.getElementById("creation-overlay-title").textContent = langData.overlayTitle;
-    document.getElementById("new-note-title").textContent = langData.newNote;
-    document.getElementById("new-checklist-title").textContent = langData.newChecklist;
+    // Defensive Guarded Translations (Prevents any 'null' properties crashes!)
+    const elNotesCol = document.getElementById("notes-column-title");
+    if (elNotesCol) elNotesCol.textContent = langData.notesColumn;
+
+    const elListsCol = document.getElementById("lists-column-title");
+    if (elListsCol) elListsCol.textContent = langData.listsColumn;
+
+    const elOverlayTitle = document.getElementById("creation-overlay-title");
+    if (elOverlayTitle) elOverlayTitle.textContent = langData.overlayTitle;
+
+    const elNewNoteTitle = document.getElementById("new-note-title");
+    if (elNewNoteTitle) elNewNoteTitle.textContent = langData.newNote;
+
+    const elNewListTitle = document.getElementById("new-checklist-title");
+    if (elNewListTitle) elNewListTitle.textContent = langData.newChecklist;
     
-    createNoteBtn.textContent = langData.createNoteBtn;
-    createListBtn.textContent = langData.createListBtn;
-    noteTitleInput.placeholder = langData.placeholderNote;
-    checklistTitleInput.placeholder = langData.placeholderList;
+    // Core Button & Input Safe Checks
+    if (createNoteBtn) createNoteBtn.textContent = langData.createNoteBtn;
+    if (createListBtn) createListBtn.textContent = langData.createListBtn;
+    if (noteTitleInput) noteTitleInput.placeholder = langData.placeholderNote;
+    if (checklistTitleInput) checklistTitleInput.placeholder = langData.placeholderList;
     
-    langSelect.value = currentLang;
+    if (langSelect) langSelect.value = currentLang;
 }
 
 function applyFontPreferences() {
