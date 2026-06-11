@@ -201,16 +201,16 @@ function applyPalettePreferences() {
         root.style.setProperty('--primary-hover', '#45a049');
         root.style.setProperty('--border-color', '#cccccc');
     } else if (activePalette === "ocean") {
-        root.style.setProperty('--bg-color', '#e0f2f1');
+        root.style.setProperty('--bg-color', '#04bdb3');
         root.style.setProperty('--surface-color', '#004d40');
-        root.style.setProperty('--text-color', '#383232');
+        root.style.setProperty('--text-color', '#f8f6f6');
         root.style.setProperty('--primary-color', '#00bfa5');
         root.style.setProperty('--primary-hover', '#00b0ff');
         root.style.setProperty('--border-color', '#00796b');
     } else if (activePalette === "sunset") {
         root.style.setProperty('--bg-color', '#fff3e0');
         root.style.setProperty('--surface-color', '#3e2723');
-        root.style.setProperty('--text-color', '#4b4742');
+        root.style.setProperty('--text-color', '#f38908');
         root.style.setProperty('--primary-color', '#ff9800');
         root.style.setProperty('--primary-hover', '#f57c00');
         root.style.setProperty('--border-color', '#e65100');
