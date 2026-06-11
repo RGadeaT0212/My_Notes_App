@@ -15,6 +15,26 @@
     <title>My Notes App</title>
 </head>
 <body>
+<div id="auth-overlay" class="creation-overlay">
+    <div class="overlay-glass-card" style="max-width: 400px;">
+        <div class="overlay-header" style="justify-content: center;">
+            <h2><i class="fa-solid fa-lock"></i> Private Workspace</h2>
+        </div>
+        <p style="text-align: center; font-size: 14px; opacity: 0.8; margin-bottom: 20px; color: var(--text-color);">
+            Log in or create a secure private account to sync your notes.
+        </p>
+        
+        <div class="input-section" style="flex-direction: column; gap: 12px; align-items: stretch;">
+            <input type="email" id="auth-email" placeholder="Email address..." style="width: 100%;">
+            <input type="password" id="auth-password" placeholder="Password (min 6 characters)..." style="width: 100%;">
+            
+            <button id="btn-login" class="action-glow-btn" style="margin-top: 10px;">Log In</button>
+            <button id="btn-signup" class="save-card-btn" style="background-color: transparent; border: 1px solid var(--primary-color); color: var(--text-color);">Sign Up / Create Account</button>
+        </div>
+        
+        <p id="auth-error-msg" style="color: #ff3333; font-size: 13px; text-align: center; margin-top: 15px; font-weight: bold;"></p>
+    </div>
+</div>
     <header class="app-header">
         <div class="header-container">
             <h1 class="app-title">
